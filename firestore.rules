@@ -1,0 +1,202 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'anthonyekong37@gmail.com'
+      );
+    }
+
+    function isOfficer() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/officers/$(request.auth.uid)) ||
+        isAdmin()
+      );
+    }
+
+    // Validation helpers
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'fullName', 'email', 'role', 'createdAt']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.fullName is string && data.fullName.size() <= 120 &&
+             data.email is string && data.email.size() <= 120 &&
+             data.role in ['vendor', 'admin', 'officer'];
+    }
+
+    function isValidMarket(data) {
+      return data.keys().hasAll(['id', 'name', 'code', 'address', 'status', 'createdAt']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 120 &&
+             data.code is string && data.code.size() <= 32 &&
+             data.address is string && data.address.size() <= 255 &&
+             data.status in ['active', 'inactive'];
+    }
+
+    function isValidStall(data) {
+      return data.keys().hasAll(['id', 'marketId', 'stallNumber', 'category', 'monthlyRateNgn', 'status', 'createdAt']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.marketId is string && data.marketId.size() <= 128 &&
+             data.stallNumber is string && data.stallNumber.size() <= 32 &&
+             data.monthlyRateNgn is number && data.monthlyRateNgn >= 0 &&
+             data.status in ['available', 'reserved', 'occupied', 'maintenance', 'inactive'];
+    }
+
+    function isValidReservation(data) {
+      return data.keys().hasAll(['id', 'reservationNumber', 'stallId', 'marketId', 'vendorId', 'totalAmountNgn', 'status', 'createdAt']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.stallId is string && data.stallId.size() <= 128 &&
+             data.marketId is string && data.marketId.size() <= 128 &&
+             data.vendorId is string && data.vendorId.size() <= 128 &&
+             data.totalAmountNgn is number && data.totalAmountNgn >= 0 &&
+             data.status in ['pending_payment', 'confirmed', 'cancelled', 'expired'];
+    }
+
+    function isValidBookingTicket(data) {
+      return data.keys().hasAll(['id', 'ticketNumber', 'reservationId', 'stallId', 'marketId', 'vendorId', 'status', 'qrVerificationCode', 'createdAt']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.status in ['valid', 'checked_in', 'cancelled', 'expired'];
+    }
+
+    function isValidCheckIn(data) {
+      return data.keys().hasAll(['id', 'ticketId', 'officerId', 'result', 'timestamp']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.ticketId is string && data.ticketId.size() <= 128 &&
+             data.result in ['valid', 'duplicate', 'invalid', 'cancelled'];
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['id', 'action', 'timestamp']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.action is string && data.action.size() <= 128;
+    }
+
+    // Collection rules
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && isValidUser(incoming()) && (incoming().role == 'vendor' || isAdmin());
+      allow update: if (isOwner(userId) || isAdmin()) && isValidUser(incoming()) &&
+                       (isAdmin() || (incoming().role == existing().role && incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'phone', 'businessName', 'lgaOrigin', 'updatedAt'])));
+      allow delete: if isAdmin();
+    }
+
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /officers/{officerId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /markets/{marketId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && isValidMarket(incoming());
+    }
+
+    // Stalls: Protected against unauthorized price or property manipulation.
+    // Vendors may only transition stalls to 'reserved' during active lock, or 'occupied' on confirmed booking.
+    match /stalls/{stallId} {
+      allow read: if true;
+      allow create, delete: if isAdmin() && isValidStall(incoming());
+      allow update: if (isAdmin() && isValidStall(incoming())) || (
+        isSignedIn() && isValidStall(incoming()) && (
+          // Vendor establishes reservation hold
+          (
+            existing().status in ['available', 'reserved'] &&
+            incoming().status == 'reserved' &&
+            incoming().currentVendorId == request.auth.uid &&
+            incoming().stallNumber == existing().stallNumber &&
+            incoming().monthlyRateNgn == existing().monthlyRateNgn &&
+            incoming().marketId == existing().marketId
+          ) ||
+          // Vendor completes payment and claims occupied status
+          (
+            existing().status == 'reserved' &&
+            existing().currentVendorId == request.auth.uid &&
+            incoming().status == 'occupied' &&
+            incoming().currentVendorId == request.auth.uid &&
+            incoming().stallNumber == existing().stallNumber &&
+            incoming().monthlyRateNgn == existing().monthlyRateNgn &&
+            incoming().marketId == existing().marketId
+          )
+        )
+      );
+    }
+
+    // Reservations: Authoritative tracking of vendor stall requests
+    match /reservations/{reservationId} {
+      allow get: if isSignedIn() && (resource.data.vendorId == request.auth.uid || isAdmin() || isOfficer());
+      allow list: if isSignedIn() && (resource.data.vendorId == request.auth.uid || isAdmin() || isOfficer());
+      allow create: if isSignedIn() && incoming().vendorId == request.auth.uid && isValidReservation(incoming()) && incoming().status == 'pending_payment';
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        (existing().vendorId == request.auth.uid && incoming().vendorId == request.auth.uid &&
+         (
+           (existing().status == 'pending_payment' && incoming().status in ['confirmed', 'cancelled']) ||
+           (existing().status == incoming().status)
+         ))
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Payments: Verified transaction records
+    match /payments/{paymentId} {
+      allow get: if isSignedIn() && (resource.data.vendorId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.vendorId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && incoming().vendorId == request.auth.uid && incoming().status == 'success';
+      allow update, delete: if isAdmin();
+    }
+
+    // Booking Tickets: Authoritative verified tickets
+    match /bookingTickets/{ticketId} {
+      allow get: if isSignedIn() && (resource.data.vendorId == request.auth.uid || isOfficer() || isAdmin());
+      allow list: if isSignedIn() && (resource.data.vendorId == request.auth.uid || isOfficer() || isAdmin());
+      allow create: if isSignedIn() && (incoming().vendorId == request.auth.uid || isAdmin()) && isValidBookingTicket(incoming());
+      allow update: if (isOfficer() || isAdmin()) && isValidBookingTicket(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /checkIns/{checkInId} {
+      allow get: if isOfficer() || isAdmin();
+      allow list: if isOfficer() || isAdmin();
+      allow create: if (isOfficer() || isAdmin()) && isValidCheckIn(incoming());
+      allow update, delete: if isAdmin();
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn() && isValidAuditLog(incoming());
+      allow update, delete: if false;
+    }
+
+    match /applicationSettings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

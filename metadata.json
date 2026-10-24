@@ -1,0 +1,6 @@
+{
+  "name": "EketSpace",
+  "description": "Smart market stall registration, allocation, and verification platform for Eket Local Government Area, Akwa Ibom State.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

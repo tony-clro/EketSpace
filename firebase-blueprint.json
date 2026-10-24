@@ -1,0 +1,253 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Registered user profile in EketSpace (vendor, administrator, or verification officer)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "fullName": { "type": "string", "maxLength": 120 },
+        "email": { "type": "string", "maxLength": 120 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "role": { "type": "string", "enum": ["vendor", "admin", "officer"] },
+        "businessName": { "type": "string", "maxLength": 150 },
+        "lgaOrigin": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "fullName", "email", "role", "createdAt"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Authoritative list of administrator UIDs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "maxLength": 120 },
+        "addedAt": { "type": "string" }
+      },
+      "required": ["id", "email", "addedAt"]
+    },
+    "Officer": {
+      "title": "Officer",
+      "description": "Authoritative list of market verification officer UIDs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "maxLength": 120 },
+        "email": { "type": "string", "maxLength": 120 },
+        "addedAt": { "type": "string" }
+      },
+      "required": ["id", "email", "addedAt"]
+    },
+    "Market": {
+      "title": "Market",
+      "description": "Commercial market or event center configured by LGA administrators in Eket",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "maxLength": 120 },
+        "code": { "type": "string", "maxLength": 32, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "description": { "type": "string", "maxLength": 1000 },
+        "address": { "type": "string", "maxLength": 255 },
+        "lga": { "type": "string", "maxLength": 64 },
+        "state": { "type": "string", "maxLength": 64 },
+        "category": { "type": "string", "enum": ["general", "event", "specialty"] },
+        "totalStalls": { "type": "number" },
+        "availableStalls": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "code", "address", "status", "createdAt"]
+    },
+    "Stall": {
+      "title": "Stall",
+      "description": "Commercial stall space located within a market",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "marketId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "stallNumber": { "type": "string", "maxLength": 32 },
+        "section": { "type": "string", "maxLength": 64 },
+        "category": { "type": "string", "enum": ["standard", "lockup", "open", "premium", "food"] },
+        "dimensions": { "type": "string", "maxLength": 64 },
+        "dailyRateNgn": { "type": "number" },
+        "monthlyRateNgn": { "type": "number" },
+        "status": { "type": "string", "enum": ["available", "reserved", "occupied", "maintenance", "inactive"] },
+        "currentReservationId": { "type": "string", "maxLength": 128 },
+        "currentVendorId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "marketId", "stallNumber", "category", "monthlyRateNgn", "status", "createdAt"]
+    },
+    "Reservation": {
+      "title": "Reservation",
+      "description": "Vendor reservation for a specific market stall",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "reservationNumber": { "type": "string", "maxLength": 64 },
+        "stallId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "marketId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "vendorId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "vendorName": { "type": "string", "maxLength": 120 },
+        "vendorEmail": { "type": "string", "maxLength": 120 },
+        "vendorPhone": { "type": "string", "maxLength": 30 },
+        "startDate": { "type": "string", "maxLength": 32 },
+        "endDate": { "type": "string", "maxLength": 32 },
+        "durationMonths": { "type": "number" },
+        "totalAmountNgn": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending_payment", "confirmed", "cancelled", "expired"] },
+        "paymentId": { "type": "string", "maxLength": 128 },
+        "ticketId": { "type": "string", "maxLength": 128 },
+        "expiresAt": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "reservationNumber", "stallId", "marketId", "vendorId", "totalAmountNgn", "status", "createdAt"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Paystack transaction record for a market stall reservation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "reference": { "type": "string", "maxLength": 128 },
+        "reservationId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "stallId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "marketId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "vendorId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "amountNgn": { "type": "number" },
+        "currency": { "type": "string", "enum": ["NGN"] },
+        "gateway": { "type": "string", "enum": ["paystack"] },
+        "status": { "type": "string", "enum": ["pending", "success", "failed", "abandoned"] },
+        "channel": { "type": "string", "maxLength": 64 },
+        "paidAt": { "type": "string" },
+        "gatewayResponse": { "type": "string", "maxLength": 255 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "reference", "reservationId", "vendorId", "amountNgn", "currency", "gateway", "status", "createdAt"]
+    },
+    "BookingTicket": {
+      "title": "BookingTicket",
+      "description": "Verifiable digital allocation ticket with QR verification code",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ticketNumber": { "type": "string", "maxLength": 64 },
+        "reservationId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "stallId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "stallNumber": { "type": "string", "maxLength": 32 },
+        "marketId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "marketName": { "type": "string", "maxLength": 120 },
+        "vendorId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "vendorName": { "type": "string", "maxLength": 120 },
+        "vendorEmail": { "type": "string", "maxLength": 120 },
+        "vendorPhone": { "type": "string", "maxLength": 30 },
+        "validityStart": { "type": "string", "maxLength": 32 },
+        "validityEnd": { "type": "string", "maxLength": 32 },
+        "status": { "type": "string", "enum": ["valid", "checked_in", "cancelled", "expired"] },
+        "checkInCount": { "type": "number" },
+        "lastCheckInAt": { "type": "string" },
+        "qrVerificationCode": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "ticketNumber", "reservationId", "stallId", "marketId", "vendorId", "status", "qrVerificationCode", "createdAt"]
+    },
+    "CheckIn": {
+      "title": "CheckIn",
+      "description": "Stall verification check-in log recorded by market verification officer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ticketId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "reservationId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "stallId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "marketId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "officerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "officerName": { "type": "string", "maxLength": 120 },
+        "officerEmail": { "type": "string", "maxLength": 120 },
+        "result": { "type": "string", "enum": ["valid", "duplicate", "invalid", "cancelled"] },
+        "notes": { "type": "string", "maxLength": 500 },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "ticketId", "officerId", "result", "timestamp"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Administrative and financial action audit records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "action": { "type": "string", "maxLength": 128 },
+        "targetType": { "type": "string", "maxLength": 64 },
+        "targetId": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "action", "timestamp"]
+    },
+    "ApplicationSetting": {
+      "title": "ApplicationSetting",
+      "description": "System-wide settings for EketSpace",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "appName": { "type": "string", "maxLength": 64 },
+        "currency": { "type": "string", "maxLength": 16 },
+        "cancellationPolicyDays": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "appName", "currency", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Vendor and user profile documents keyed by Auth UID"
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "Authorized administrator UIDs"
+    },
+    "/officers/{officerId}": {
+      "schema": { "$ref": "#/entities/Officer" },
+      "description": "Authorized verification officer UIDs"
+    },
+    "/markets/{marketId}": {
+      "schema": { "$ref": "#/entities/Market" },
+      "description": "Market and commercial event locations in Eket LGA"
+    },
+    "/stalls/{stallId}": {
+      "schema": { "$ref": "#/entities/Stall" },
+      "description": "Market stalls and spaces with current allocation status"
+    },
+    "/reservations/{reservationId}": {
+      "schema": { "$ref": "#/entities/Reservation" },
+      "description": "Vendor reservation orders"
+    },
+    "/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/Payment" },
+      "description": "Authoritative payment transactions verified server-side"
+    },
+    "/bookingTickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/BookingTicket" },
+      "description": "Verifiable digital tickets issued upon confirmed payment"
+    },
+    "/checkIns/{checkInId}": {
+      "schema": { "$ref": "#/entities/CheckIn" },
+      "description": "Ticket scan and check-in logs recorded by verification officers"
+    },
+    "/auditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Immutable security and audit trails"
+    },
+    "/applicationSettings/{settingId}": {
+      "schema": { "$ref": "#/entities/ApplicationSetting" },
+      "description": "EketSpace application settings"
+    }
+  }
+}
